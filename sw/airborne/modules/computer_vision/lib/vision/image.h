@@ -97,6 +97,8 @@ struct crop_t {
 };
 
 /* Usefull image functions */
+void image_split_vertically(struct image_t *input,struct image_t *output_1,struct image_t *output_2);
+
 void image_add_border(struct image_t *input, struct image_t *output, uint8_t border_size);
 void image_create(struct image_t *img, uint16_t width, uint16_t height, enum image_type type);
 void image_free(struct image_t *img);

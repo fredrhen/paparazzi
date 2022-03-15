@@ -33,6 +33,25 @@
 #define CACHE_LINE_LENGTH 64
 #endif
 
+void image_split_vertically(struct image_t *input,struct image_t *output_1,struct image_t *output_2){
+
+	// Copy the creation timestamp (stays the same)
+	output_1->ts = input->ts;
+	output_1->eulers = input->eulers;
+	output_1->pprz_ts = input->pprz_ts;
+	output_2->ts = input->ts;
+	output_2->eulers = input->eulers;
+	output_2->pprz_ts = input->pprz_ts;
+
+	// Copy
+	memcpy(output_1->buf, input->buf,(input->buf_size)/2);
+	memcpy(output_2->buf, input->buf+(input->buf_size)/2, (input->buf_size)/2);
+
+	output_1->buf_size = (input->buf_size)/2;
+	output_2->buf_size = (input->buf_size)/2;
+}
+
+
 /**
  * Create a new image
  * @param[out] *img The output image
@@ -187,7 +206,7 @@ uint16_t image_yuv422_colorfilt(struct image_t *input, struct image_t *output, u
       ) {
         cnt ++;
         // UYVY
-        dest[0] = 64;        // U
+        dest[0] = 64;         // U
         dest[1] = source[1];  // Y
         dest[2] = 255;        // V
         dest[3] = source[3];  // Y
