@@ -176,7 +176,7 @@ void orange_avoider_periodic(void)
           }
 
           else {
-              moveWaypointForward(WP_GOAL, 1.25f * moveDistance);
+              moveWaypointForward(WP_GOAL, 1.3f * moveDistance);
 
       }
 
@@ -217,9 +217,14 @@ void orange_avoider_periodic(void)
       }
       break;
     case OUT_OF_BOUNDS:
-      moveWaypointForward(WP_GOAL, .25 * moveDistance);	//new
+      // slowdown
+      moveWaypointForward(WP_GOAL, .25 * moveDistance);
+
+      //stop
       waypoint_move_here_2d(WP_GOAL);
       waypoint_move_here_2d(WP_TRAJECTORY);
+
+      //turn
       increase_nav_heading(5 * heading_increment);
       moveWaypointForward(WP_TRAJECTORY, 1.5f);
 
@@ -235,9 +240,11 @@ void orange_avoider_periodic(void)
       }
       break;
     case AVOID_RIGHT_OBJECT:
+        // slow down
+        moveWaypointForward(WP_GOAL, .25 * moveDistance);
         // stop
-        waypoint_move_here_2d(WP_GOAL);
-        waypoint_move_here_2d(WP_TRAJECTORY);
+//        waypoint_move_here_2d(WP_GOAL);
+//        waypoint_move_here_2d(WP_TRAJECTORY);
 
         // turn left
         increase_nav_heading(-1 * heading_increment);
@@ -251,9 +258,11 @@ void orange_avoider_periodic(void)
 
         break;
     case AVOID_LEFT_OBJECT:
+        // slow down
+        moveWaypointForward(WP_GOAL, .25 * moveDistance);
         // stop
-        waypoint_move_here_2d(WP_GOAL);
-        waypoint_move_here_2d(WP_TRAJECTORY);
+//        waypoint_move_here_2d(WP_GOAL);
+//        waypoint_move_here_2d(WP_TRAJECTORY);
 
         // turn right
         increase_nav_heading(1 * heading_increment);
