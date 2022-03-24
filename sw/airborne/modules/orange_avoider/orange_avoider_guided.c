@@ -64,7 +64,8 @@ float oag_max_speed = 5.f;               // max flight speed [m/s]
 float oag_heading_rate = RadOfDeg(20.f);  // heading change setpoint for avoidance [rad/s]
 struct opticflow_result_t *result;
 float flow_threshold;
-float flow_threshold_const= 1
+float flow_threshold_const= 0.01 ;
+float flow_threshold_min= 0.05
 float absdiff;
 
 // define and initialise global variables
@@ -166,7 +167,7 @@ void orange_avoider_guided_periodic(void)
     Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
     float speed_sp = fminf(oag_max_speed, oag_max_speed);
-    flow_threshold= flow_threshold_const * airspeed_f();
+    flow_threshold= flow_threshold_const * airspeed_f()+flow_threshold_min;
 
     switch (navigation_state){
         case SAFE:
