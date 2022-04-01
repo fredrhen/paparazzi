@@ -45,7 +45,7 @@
 #define VERBOSE_PRINT(...)
 #endif
 
-uint8_t chooseRandomIncrementAvoidance(void);
+
 
 enum navigation_state_t {
     SAFE,
@@ -111,9 +111,6 @@ static void floor_detection_cb(uint8_t _attribute_((unused)) sender_id,
  */
 void orange_avoider_guided_init(void)
 {
-    // Initialise random values
-    srand(time(NULL));
-    chooseRandomIncrementAvoidance();
 
     // bind our colorfilter callbacks to receive the color filter outputs
     AbiBindMsgVISUAL_DETECTION(ORANGE_AVOIDER_VISUAL_DETECTION_ID, &color_detection_ev, color_detection_cb);
@@ -132,20 +129,8 @@ void orange_avoider_guided_periodic(void)
         return;
     }
 
+    // Take the absolute difference between left divergence and right divergence
     absdiff = fabs(result->div_size_left - result->div_size_right);
-
-//    printf("Left: ");
-//    printf("%f  ,", result->div_size_left);
-//
-//    printf("Right: ");
-//    printf("%f \n", result->div_size_right);
-//
-//    printf("Difference:");
-//    printf("%f \n", fabs(result->div_size_left - result->div_size_right));
-
-    printf("Airspeed");
-    printf("%f \n", airspeed_f);
-
 
     // compute current color thresholds
     int32_t color_count_threshold = oag_color_count_frac * front_camera.output_size.w * front_camera.output_size.h;
@@ -166,23 +151,32 @@ void orange_avoider_guided_periodic(void)
     // bound obstacle_free_confidence
     Bound(obstacle_free_confidence, 0, max_trajectory_confidence);
 
-    float speed_sp = fminf(oag_max_speed, oag_max_speed);
+    float speed_sp = oag_max_speeds
+
+    //Flow threshold is a function of speed. The flow constant is multiplied by the airspeed of the drone + a minimum flow threshold for when the airspeed is zero
     flow_threshold= flow_threshold_const * airspeed_f()+flow_threshold_min;
 
     switch (navigation_state){
         case SAFE:
+            // Condition for out of bounds detection
             if (floor_count < floor_count_threshold || fabsf(floor_centroid_frac) > 0.12){
                 navigation_state = OUT_OF_BOUNDS;
             }
+            //Condition for near obstacle detection using focus of Expansion
             else if (result->focus_of_expansion_x == 0) {
                 navigation_state = OBSTACLE_FOUND;
             }
+            // Conditions for turning left: left divergence is higher than right divergence and the absolute value
+            // of the difference between left divergence and right divergence is bigger than the flow threshold
             else if (result->div_size_left > result->div_size_right && absdiff > flow_threshold) {
                 navigation_state = AVOID_LEFT_OBJECT;
             }
+                // Conditions for turning right: right divergence is higher than left divergence and the absolute value
+                // of the difference between left divergence and right divergence is bigger than the flow threshold
             else if (result->div_size_left < result->div_size_right && absdiff > flow_threshold){
                 navigation_state = AVOID_RIGHT_OBJECT;
             }
+            // If there are no obstacles in the way and it is not out of bounds the drone is given a forward velocity
             else {
                 guidance_h_set_guided_body_vel(speed_sp, 0);
             }
@@ -192,19 +186,21 @@ void orange_avoider_guided_periodic(void)
             // stop
             guidance_h_set_guided_body_vel(0, 0);
 
-            if (result->div_size_left > result->div_size_left){
-                // turn left
+            //Check on which side the divergence is bigger so we know which direction we should turn to
+            if (result->div_size_left > result->div_size_right){
+                // Change heading rate to turn left
                 guidance_h_set_guided_heading_rate(-oag_heading_rate);
                 navigation_state = SAFE;
             }
 
             else {
-                // turn right
+                // Change heading rate to turn right
                 guidance_h_set_guided_heading_rate(oag_heading_rate)
                 navigation_state = SAFE;
             }
 
             break;
+
         case SEARCH_FOR_SAFE_HEADING:
             guidance_h_set_guided_heading_rate(avoidance_heading_direction * oag_heading_rate);
 
@@ -214,6 +210,7 @@ void orange_avoider_guided_periodic(void)
               navigation_state = SAFE;
             }
       break;
+
     case OUT_OF_BOUNDS:
       // stop
       guidance_h_set_guided_body_vel(0, 0);
@@ -242,11 +239,9 @@ void orange_avoider_guided_periodic(void)
             // stop
             guidance_h_set_guided_body_vel(0, 0);
 
+            // Positive heading rate to make a clockwise turn
             guidance_h_set_guided_heading_rate(oag_heading_rate);
 
-//        if (absdiff <= 2 * flow_threshold){
-//            navigation_state = SAFE;
-//        }
             navigation_state = SAFE;
 
             break;
@@ -254,11 +249,9 @@ void orange_avoider_guided_periodic(void)
             // stop
             guidance_h_set_guided_body_vel(0, 0);
 
+            // Negative heading rate to make a counter-clockwise turn
             guidance_h_set_guided_heading_rate(-oag_heading_rate);
 
-//        if (absdiff <= 2 * flow_threshold){
-//            navigation_state = SAFE;
-//        }
             navigation_state = SAFE;
 
             break;
@@ -268,18 +261,3 @@ void orange_avoider_guided_periodic(void)
     return;
 }
 
-/*
- * Sets the variable 'incrementForAvoidance' randomly positive/negative
- */
-uint8_t chooseRandomIncrementAvoidance(void)
-{
-    // Randomly choose CW or CCW avoiding direction
-    if (rand() % 2 == 0) {
-        avoidance_heading_direction = 1.f;
-        VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction * oag_heading_rate);
-    } else {
-        avoidance_heading_direction = -1.f;
-        VERBOSE_PRINT("Set avoidance increment to: %f\n", avoidance_heading_direction * oag_heading_rate);
-    }
-    return false;
-}
